@@ -1,0 +1,8 @@
+name: 'Purge packages from SemVer'
+description: 'Purge packages from SemVer'
+outputs:
+  packagesDeleted:
+    description: 'The removed packages'
+runs:
+  using: 'node12'
+  main: 'index.js'
