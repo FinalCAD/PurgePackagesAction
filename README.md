@@ -11,4 +11,4 @@ The list of packages removed.
 
 ## Example usage
 
-uses: MaximeCharles/purge-packages@v0.1
+uses: FinalCAD/purge-packages@v1

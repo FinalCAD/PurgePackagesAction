@@ -1,78 +1,55 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
+const axios = require('axios');
 
-const githubToken = process.env.GITHUB_TOKEN;
+const githubToken = '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'; // process.env.GITHUB_TOKEN;
 const ghClient = new github.getOctokit(githubToken);
 
 
 const getPackages = async (owner, repo) => {
-    let edges = await ghClient.graphql(`{
-        repository(owner: "${owner}", name:"${repo}"){
-            packages(first: 100, packageType: NUGET) {
-                edges {
-                  node {
-                    id
-                    name
-                    packageType
-                  }
-                }
-              }
+    let currentCount = 0;
+    let index = 1;
+    let packages = []
+    // use old style way because iterate doesn't work on packages...
+    do {
+        const response = await axios.get(`https://api.github.com/orgs/${owner}/packages?package_type=nuget&page=${index}`, { headers: {
+            'Authorization': `bearer ${githubToken}`,
+            'Accept': 'application/vnd.github+json'
+        }});
+        index = index + 1;
+        currentCount = response.data.length;
+        if (response.data.length >= 1) {
+            packages = packages.concat(response.data.filter((element) => element.repository && element.repository.name === repo));
         }
-    }`, {});
-    edges = edges.repository.packages.edges;
-    return edges.map(p => {
-        return p.node.name;
-    });
+    } while(currentCount > 0)
+
+    console.log(`Packages found in repository ${repo}: ${packages.length}`);
+
+    return packages;
 }
 
 const getVersions = async (owner, repo, package) => {
-    let edges = await ghClient.graphql(`{
-        repository(owner: "${owner}", name: "${repo}") {
-            packages(first: 1, packageType: NUGET, names: "${package}") {
-              edges {
-                node {
-                  versions(first: 100) {
-                    totalCount
-                    nodes {
-                      id
-                      version
-                    }
-                  }
-                }
-              }
-            }
-          }
-    }`, {});
-    edges = edges.repository.packages.edges;
-    return edges[0].node.versions.nodes.map(v => {
+    const versions = await ghClient.paginate(ghClient.rest.packages.getAllPackageVersionsForPackageOwnedByOrg, {
+        package_type: package.package_type,
+        package_name: package.name,
+        org: owner
+    });
+    return versions.map(v => {
         return {
             id: v.id,
-            version: v.version
+            package: package,
+            version: v.name
         };
     });
 }
 
-const deletePackage = async (version) => {
-    return new Promise((resolve, reject) => {
-        fetch(
-            'https://api.github.com/graphql',
-            {
-                method: 'post',
-                body: JSON.stringify({query: `mutation { deletePackageVersion(input:{packageVersionId:\"${version.id}\"}) { success }}`}),
-                headers: {
-                    'Accept': 'application/vnd.github.package-deletes-preview+json',
-                    'Authorization': `bearer ${githubToken}`
-                },
-            })
-            .then(res => res.json())
-            .then(json => {
-                core.debug(JSON.stringify(json));
-                resolve(json);
-            })
-            .catch(error => {
-                core.setFailed(`failed to delete ${JSON.stringify(version)}: ${JSON.stringify(error.message)}`);
-                reject();
-            });
+const deletePackage = async (owner, version) => {
+    console.log(`Remove package ${version.package.name}:${version.version}`);
+    await ghClient.rest.packages.deletePackageVersionForOrg({
+        package_type: version.package.package_type,
+        package_name: version.package.name,
+        org: owner,
+        package_version_id: version.id
     })
 
 };
@@ -81,8 +58,8 @@ const filterBy = (wildcard, str) => new RegExp('^' + wildcard.replace(/\*/g, '.*
 
 const run = async () => {
     const context = await github.context;
-    let owner = context.payload.repository.full_name.split('/')[0];
-    let repo = context.payload.repository.full_name.split('/')[1];
+    let owner = 'FinalCAD';//context.payload.repository.full_name.split('/')[0];
+    let repo = 'Playground'; //context.payload.repository.full_name.split('/')[1];
 
     var packages = await getPackages(owner, repo);
     versionToBeRemoved = [];
@@ -95,11 +72,7 @@ const run = async () => {
             if (versions.some(p => p.version === version)) {
                 v = preVersions.filter(x => x.version.startsWith(version));
                 for (const d of v) {
-                    if (process.env.CI === 'true') {
-                        await deletePackage(d);
-                    } else {
-                        console.log(d);
-                    }
+                   await deletePackage(owner, d);
                 }
                 versionToBeRemoved = versionToBeRemoved.concat(v.map(o => {
                     return `${package}:${o.version}`;
@@ -107,7 +80,7 @@ const run = async () => {
             }
         }
     }
-    core.setOutput('packagesDeleted', versionToBeRemoved.join(','));
+//    core.setOutput('packagesDeleted', versionToBeRemoved.join(','));
 }
 
 try {
