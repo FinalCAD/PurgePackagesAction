@@ -2,7 +2,7 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const axios = require('axios');
 
-const githubToken = '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'; // process.env.GITHUB_TOKEN;
+const githubToken = process.env.GITHUB_TOKEN;
 const ghClient = new github.getOctokit(githubToken);
 
 
@@ -58,8 +58,8 @@ const filterBy = (wildcard, str) => new RegExp('^' + wildcard.replace(/\*/g, '.*
 
 const run = async () => {
     const context = await github.context;
-    let owner = 'FinalCAD';//context.payload.repository.full_name.split('/')[0];
-    let repo = 'Playground'; //context.payload.repository.full_name.split('/')[1];
+    let owner = context.payload.repository.full_name.split('/')[0];
+    let repo = context.payload.repository.full_name.split('/')[1];
 
     var packages = await getPackages(owner, repo);
     versionToBeRemoved = [];

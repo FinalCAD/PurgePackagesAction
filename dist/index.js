@@ -15875,7 +15875,7 @@ const core = __nccwpck_require__(2186);
 const github = __nccwpck_require__(5438);
 const axios = __nccwpck_require__(8757);
 
-const githubToken = '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'; // process.env.GITHUB_TOKEN;
+const githubToken = process.env.GITHUB_TOKEN;
 const ghClient = new github.getOctokit(githubToken);
 
 
@@ -15931,8 +15931,8 @@ const filterBy = (wildcard, str) => new RegExp('^' + wildcard.replace(/\*/g, '.*
 
 const run = async () => {
     const context = await github.context;
-    let owner = 'FinalCAD';//context.payload.repository.full_name.split('/')[0];
-    let repo = 'Playground'; //context.payload.repository.full_name.split('/')[1];
+    let owner = context.payload.repository.full_name.split('/')[0];
+    let repo = context.payload.repository.full_name.split('/')[1];
 
     var packages = await getPackages(owner, repo);
     versionToBeRemoved = [];
