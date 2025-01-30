@@ -1,14 +1,5 @@
 # Purge NuGet packages action
 
-This action remove old NuGet packages.
+## Deprecated version
 
-#
-## Outputs
-
-## `packagesDeleted`
-
-The list of packages removed.
-
-## Example usage
-
-uses: FinalCAD/purge-packages@v1
+The action FinalCAD/PurgePackagesAction is deprecated. Don't use!

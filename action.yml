@@ -4,5 +4,10 @@ outputs:
   packagesDeleted:
     description: 'The removed packages'
 runs:
-  using: 'node16'
-  main: 'dist/index.js'
+  using: 'composite'
+  steps:
+    - name: Deprecated FinalCAD/PurgePackagesAction
+      shell: bash
+      run: |
+        echo '::error title=Deprecated FinalCAD/PurgePackagesAction::The action FinalCAD/PurgePackagesAction is deprecated. Don't use it!'
+        exit 1
